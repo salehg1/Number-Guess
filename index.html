@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Number Guess — SalStack Playground</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #070b17;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+    }
+
+    a { color: #06b6d4; text-decoration: none; }
+    a:hover { opacity: 0.75; }
+
+    .back { align-self: flex-start; font-size: 0.78rem; color: #475569; margin-bottom: 20px; }
+    .back:hover { color: #06b6d4; }
+
+    .window {
+      background: #0d1526;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .win-bar {
+      background: #111827;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ef4444; }
+    .dot-y { background: #f59e0b; }
+    .dot-g { background: #22c55e; }
+    .win-title   { margin-left: 8px; font-size: 0.75rem; color: #475569; }
+    .win-attempts{ margin-left: auto; font-size: 0.75rem; color: #64748b; }
+
+    .win-body { padding: 28px 24px; display: flex; flex-direction: column; gap: 20px; align-items: center; }
+
+    .range-label { font-size: 0.78rem; color: #475569; text-align: center; }
+    .range-label span { color: #06b6d4; }
+
+    /* temperature meter */
+    .temp-meter {
+      width: 100%;
+      height: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .temp-fill {
+      height: 100%;
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.4s, background 0.4s;
+    }
+
+    .feedback {
+      font-size: 1rem;
+      text-align: center;
+      min-height: 1.4em;
+      color: #64748b;
+    }
+    .feedback.hot    { color: #f59e0b; }
+    .feedback.cold   { color: #38bdf8; }
+    .feedback.win    { color: #4ade80; }
+    .feedback.lose   { color: #f87171; }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+    .guess-input {
+      flex: 1;
+      background: #070b17;
+      border: 1px solid rgba(6,182,212,0.3);
+      color: #e2e8f0;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 1.1rem;
+      text-align: center;
+    }
+    .guess-input:focus { outline: none; border-color: #06b6d4; }
+    .guess-input:disabled { opacity: 0.4; }
+
+    .btn {
+      background: transparent;
+      border: 1px solid rgba(6,182,212,0.4);
+      color: #06b6d4;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: rgba(6,182,212,0.1); border-color: #06b6d4; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .history {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 28px;
+    }
+    .guess-chip {
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      border-radius: 99px;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #475569;
+    }
+
+    .name-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .name-input {
+      background: #070b17;
+      border: 1px solid rgba(6,182,212,0.3);
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      width: 160px;
+    }
+    .name-input:focus { outline: none; border-color: #06b6d4; }
+    .name-input::placeholder { color: #334155; }
+
+    .lb-panel {
+      width: 100%;
+      max-width: 420px;
+      background: #0d1526;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 16px;
+    }
+    .lb-bar   { background: #111827; padding: 10px 16px; font-size: 0.72rem; color: #475569; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .lb-list  { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .lb-row   { display: flex; align-items: center; gap: 10px; font-size: 0.78rem; }
+    .lb-rank  { color: #334155; width: 20px; text-align: right; }
+    .lb-rank.gold   { color: #f59e0b; }
+    .lb-rank.silver { color: #94a3b8; }
+    .lb-rank.bronze { color: #b45309; }
+    .lb-name  { flex: 1; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lb-val   { color: #4ade80; }
+    .lb-empty { font-size: 0.75rem; color: #334155; padding: 8px 16px; }
+  </style>
+</head>
+<body>
+
+<a href="../../projects.html#playground" class="back">← back to projects</a>
+
+<div class="window">
+  <div class="win-bar">
+    <span class="dot dot-r"></span>
+    <span class="dot dot-y"></span>
+    <span class="dot dot-g"></span>
+    <span class="win-title">number_guess.sh — 1 to 100</span>
+    <span class="win-attempts">attempts: <span id="att-disp">0</span></span>
+  </div>
+  <div class="win-body">
+
+    <p class="range-label">Guess the number between <span>1</span> and <span>100</span></p>
+
+    <div class="temp-meter"><div class="temp-fill" id="temp-fill"></div></div>
+
+    <p class="feedback" id="feedback">// enter your first guess</p>
+
+    <div class="input-row">
+      <input class="guess-input" id="guess-input" type="number" min="1" max="100" placeholder="?" />
+      <button class="btn" id="btn-guess">$ guess</button>
+    </div>
+
+    <div class="history" id="history"></div>
+
+    <div class="name-row">
+      <input class="name-input" id="player-name" placeholder="your name" maxlength="20" />
+      <button class="btn" id="btn-restart">$ restart</button>
+      <button class="btn" id="btn-push" style="display:none;">$ push_score</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="lb-panel">
+  <div class="lb-bar">// top scores — number guess (fewer guesses = higher score)</div>
+  <div class="lb-list" id="lb-list"><p class="lb-empty">loading…</p></div>
+</div>
+
+<script src="../leaderboard.js"></script>
+<script>
+const feedbackEl = document.getElementById('feedback');
+const guessInput = document.getElementById('guess-input');
+const btnGuess   = document.getElementById('btn-guess');
+const btnRestart = document.getElementById('btn-restart');
+const btnPush    = document.getElementById('btn-push');
+const attDisp    = document.getElementById('att-disp');
+const historyEl  = document.getElementById('history');
+const tempFill   = document.getElementById('temp-fill');
+const nameInput  = document.getElementById('player-name');
+const lbList     = document.getElementById('lb-list');
+
+let secret, attempts, done, lastScore;
+const MAX = 10;
+
+function initGame() {
+  secret   = Math.floor(Math.random() * 100) + 1;
+  attempts = 0;
+  done     = false;
+
+  attDisp.textContent    = '0';
+  feedbackEl.className   = 'feedback';
+  feedbackEl.textContent = '// enter your first guess';
+  guessInput.value       = '';
+  guessInput.disabled    = false;
+  btnGuess.disabled      = false;
+  historyEl.innerHTML    = '';
+  btnPush.style.display  = 'none';
+  tempFill.style.width   = '0%';
+  tempFill.style.background = '#06b6d4';
+}
+
+function submitGuess() {
+  if (done) return;
+  const g = parseInt(guessInput.value);
+  if (!g || g < 1 || g > 100) {
+    feedbackEl.className   = 'feedback';
+    feedbackEl.textContent = '// enter a number between 1 and 100';
+    return;
+  }
+
+  attempts++;
+  attDisp.textContent = attempts;
+
+  const chip = document.createElement('span');
+  chip.className   = 'guess-chip';
+  chip.textContent = g;
+  historyEl.appendChild(chip);
+
+  const diff = Math.abs(g - secret);
+  const heat = Math.max(0, Math.round((1 - diff / 100) * 100));
+
+  tempFill.style.width = heat + '%';
+
+  if (g === secret) {
+    feedbackEl.className   = 'feedback win';
+    feedbackEl.textContent = `// correct! it was ${secret} — ${attempts} attempt${attempts > 1 ? 's' : ''}`;
+    guessInput.disabled    = true;
+    btnGuess.disabled      = true;
+    done      = true;
+    lastScore = Math.max(0, 100 - (attempts - 1) * 10);
+    btnPush.style.display  = '';
+    tempFill.style.background = '#4ade80';
+  } else if (attempts >= MAX) {
+    feedbackEl.className   = 'feedback lose';
+    feedbackEl.textContent = `// game over! the number was ${secret}`;
+    guessInput.disabled    = true;
+    btnGuess.disabled      = true;
+    done = true;
+    tempFill.style.background = '#f87171';
+  } else {
+    const dir  = g < secret ? '↑ too low' : '↓ too high';
+    const temp = diff <= 5 ? 'scorching!' : diff <= 15 ? '🔥 hot' : diff <= 30 ? 'warm' : '❄ cold';
+    feedbackEl.className   = 'feedback ' + (diff <= 15 ? 'hot' : 'cold');
+    feedbackEl.textContent = `// ${dir} — ${temp}`;
+    tempFill.style.background = diff <= 15 ? '#f59e0b' : '#38bdf8';
+  }
+
+  guessInput.value = '';
+  guessInput.focus();
+}
+
+btnGuess.addEventListener('click', submitGuess);
+guessInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitGuess(); });
+btnRestart.addEventListener('click', initGame);
+
+btnPush.addEventListener('click', async () => {
+  const name = nameInput.value.trim() || 'anonymous';
+  btnPush.disabled = true;
+  btnPush.textContent = 'pushing…';
+  const disp = `${lastScore} pts (${attempts} guesses)`;
+  const rank  = await LB.save('NumberGuess', name, lastScore, disp);
+  btnPush.textContent = `✓ rank #${rank}`;
+  await loadLeaderboard();
+});
+
+async function loadLeaderboard() {
+  const entries = await LB.getTop('NumberGuess', 10);
+  const medals  = ['gold','silver','bronze'];
+  if (!entries.length) {
+    lbList.innerHTML = '<p class="lb-empty">no scores yet — be the first!</p>';
+    return;
+  }
+  lbList.innerHTML = entries.map((e,i) => `
+    <div class="lb-row">
+      <span class="lb-rank ${medals[i]||''}">#${i+1}</span>
+      <span class="lb-name">${e.player_name}</span>
+      <span class="lb-val">${e.display||e.score+' pts'}</span>
+    </div>
+  `).join('');
+}
+
+initGame();
+loadLeaderboard();
+</script>
+</body>
+</html>
